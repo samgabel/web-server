@@ -7,14 +7,19 @@ import (
 
 func main() {
 	const port = "8080"
+	const filepathRoot = "./"
 
 	// define the request multiplexer
-	requestMultiplexer := http.NewServeMux()
+	mux := http.NewServeMux()
+
+	// add handler for root path
+	// our handler is a FileServer serving the root `.`
+	mux.Handle("/", http.FileServer(http.Dir(filepathRoot)))
 
 	// define the http srv
 	srv := &http.Server{
 		Addr: "localhost:" + port,
-		Handler: requestMultiplexer,
+		Handler: mux,
 	}
 
 	// print report

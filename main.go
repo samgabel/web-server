@@ -12,13 +12,28 @@ func main() {
 	// define the request multiplexer
 	mux := http.NewServeMux()
 
-	// add handler for root path
-	// our handler is a FileServer serving the root `.`
-	mux.Handle("/", http.FileServer(http.Dir(filepathRoot)))
+	// register a handler for localhost:8080/app
+	mux.Handle("/app/*",
+		// strip the "app/" request prefix before passing on to the FileServer handler (essentially makes the "app/" prefix map to the filepathRoot)
+		http.StripPrefix("/app",
+			// our handler is a FileServer serving the root `./` of this directory
+			http.FileServer(http.Dir(filepathRoot)),
+		),
+	)
+
+	// register a custom handler for readiness endpoint localhost:8080/healthz
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		// write "Content-Type" header
+		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+		// write status code
+		w.WriteHeader(http.StatusOK)
+		// write "OK" to body
+		w.Write([]byte(http.StatusText(http.StatusOK)))
+	})
 
 	// define the http srv
 	srv := &http.Server{
-		Addr: "localhost:" + port,
+		Addr:    "localhost:" + port,
 		Handler: mux,
 	}
 

@@ -14,10 +14,20 @@ func main() {
 	// define the request multiplexer
 	mux := http.NewServeMux()
 
-	// register a fileserver handler
-	mux.Handle("/app/*", http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
+	// define api config instance
+	cfg := apiConfig{
+		fileserverHits: 0,
+	}
+
+	// register a STATEFUL fileserver handler
+	// implement the middleware to wrap the fileserver handler
+	mux.Handle("/app/*", cfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
 	// register a custom handler for readiness endpoint
 	mux.HandleFunc("/healthz", handlerReadiness)
+	// register a custom handler for metrics endpoint
+	mux.HandleFunc("/metrics", cfg.handlerMetrics)
+	// register a custom handler for metrics endpoint
+	mux.HandleFunc("/reset", cfg.handlerResetMetrics)
 
 	// define the http server
 	srv := &http.Server{

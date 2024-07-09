@@ -23,9 +23,11 @@ func main() {
 	// implement the middleware to wrap the fileserver handler
 	mux.Handle("/app/*", cfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
 	// register a custom handler for readiness endpoint
-	mux.HandleFunc("/healthz", handlerReadiness)
+	// limit HTTP method access to 'GET' only
+	mux.HandleFunc("GET /healthz", handlerReadiness)
 	// register a custom handler for metrics endpoint
-	mux.HandleFunc("/metrics", cfg.handlerMetrics)
+	// limit HTTP method access to 'GET' only
+	mux.HandleFunc("GET /metrics", cfg.handlerMetrics)
 	// register a custom handler for metrics endpoint
 	mux.HandleFunc("/reset", cfg.handlerResetMetrics)
 

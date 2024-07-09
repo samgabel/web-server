@@ -20,7 +20,8 @@ func main() {
 	mux.Handle("/app/*", cfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
 	// decouple presentation logic from api logic by providing an /api prefix path
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
-	mux.HandleFunc("GET /api/metrics", cfg.handlerMetrics)
+	// change endpoint for metrics
+	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
 	mux.HandleFunc("GET /api/reset", cfg.handlerResetMetrics)
 
 	srv := &http.Server{

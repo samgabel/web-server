@@ -13,22 +13,18 @@ const (
 func main() {
 	mux := http.NewServeMux()
 
-	cfg := apiConfig{
-		fileserverHits: 0,
-	}
+	cfg := newAPIConfig()
 
 	mux.Handle("/app/*", cfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
-	// decouple presentation logic from api logic by providing an /api prefix path
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
-	// change endpoint for metrics
 	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
 	mux.HandleFunc("GET /api/reset", cfg.handlerResetMetrics)
 
 	srv := &http.Server{
-		Addr:    "localhost:" + port,
-		Handler: mux,
+		Addr:    ":" + port,
+		Handler: middlewareLogging(mux),
 	}
 
-	log.Printf("Serving on port: %s\n", port)
+	log.Printf("Serving on %s\n", srv.Addr)
 	log.Fatal(srv.ListenAndServe())
 }

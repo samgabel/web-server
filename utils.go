@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 )
 
 func respondWithJSON(w http.ResponseWriter, status int, payload interface{}) {
@@ -34,4 +35,18 @@ func respondWithError(w http.ResponseWriter, status int, msg string) {
 	respondWithJSON(w, status, errorResponse{
 		Error: msg,
 	})
+}
+
+func cleanBadWords(badWords map[string]struct{}, body string) string {
+	// split the string into a slice of strings by " " seperator
+	words := strings.Split(body, " ")
+	for i, word := range words {
+		lowerWord := strings.ToLower(word)
+		// check if word is in the badWords map
+		if _, ok := badWords[lowerWord]; ok {
+			words[i] = "****"
+		}
+	}
+	// return the joined slice of cleaned words
+	return strings.Join(words, " ")
 }

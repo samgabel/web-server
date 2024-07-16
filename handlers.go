@@ -39,7 +39,7 @@ func handlerValidateJSON(w http.ResponseWriter, r *http.Request) {
 	}
 	// define the json go struct mapping for the valid response
 	type validResponse struct {
-		Valid bool    `json:"valid"`
+		CleanedBody string `json:"cleaned_body"`
 	}
 	// create a new decoder with the request body
 	decoder := json.NewDecoder(r.Body)
@@ -58,8 +58,14 @@ func handlerValidateJSON(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "Chirp is too long")
 		return
 	}
+	// define case-insensitive bad words map
+	badWords := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
+	}
 	// if there are no decoding errors or bad requests, then we will send a reponse `valid: true` JSON msg
 	respondWithJSON(w, http.StatusOK, validResponse{
-		Valid: true,
+		CleanedBody: cleanBadWords(badWords, params.Body),
 	})
 }

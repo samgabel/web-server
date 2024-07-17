@@ -9,3 +9,7 @@ func newAPIConfig() apiConfig {
 		fileserverHits: 0,
 	}
 }
+
+type Chirp struct {
+	Body string `json:"body"`
+}

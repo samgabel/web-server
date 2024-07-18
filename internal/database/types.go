@@ -9,15 +9,11 @@ type DB struct {
 	mu   *sync.RWMutex
 }
 
-// NewDB creates a new database connection
-// and creates the database file if it doesn't exist
 func NewDB(path string) (*DB, error) {
-	// create new DB struct instance
 	db := &DB{
 		path: path,
 		mu:   &sync.RWMutex{},
 	}
-	// create a database file if one doesn't exist
 	if err := db.ensureDB(); err != nil {
 		return nil, err
 	}

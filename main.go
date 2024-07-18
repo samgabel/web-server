@@ -33,16 +33,17 @@ func main() {
 		}
 	}
 
+	// register handlers
 	mux.Handle("/app/*", cfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
 	mux.HandleFunc("GET /api/reset", cfg.handlerResetMetrics)
-	// change these to a curried function(*database.DB) returning a http.HandlerFunc
 	mux.HandleFunc("POST /api/chirps", handlerPostChirp(db))
 	mux.HandleFunc("GET /api/chirps", handlerGetChirps(db))
 	mux.HandleFunc("GET /api/chirps/{chirpID}", handlerGetChirpByID(db))
 	mux.HandleFunc("POST /api/users", handlerPostUser(db))
 
+	// initialize new server
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: middlewareLogging(mux),

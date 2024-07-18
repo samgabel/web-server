@@ -66,6 +66,33 @@ func (db *DB) GetChirp(id int) (Chirp, error) {
 	return targetChirp, nil
 }
 
+// CreateUser will add a user email, create an associated id, and return the created User struct
+func (db *DB) CreateUser(email string) (User, error) {
+	// load DB into memory
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+	// create new ID
+	newID := len(dbStruct.Users) + 1
+	// create new User
+	newUser := User{
+		ID:    newID,
+		Email: email,
+	}
+	// add new User to map with associated ID
+	if dbStruct.Users == nil {
+		dbStruct.Users = make(map[int]User)
+	}
+	dbStruct.Users[newID] = newUser
+	// write new user to database
+	err = db.writeDB(dbStruct)
+	if err != nil {
+		return User{}, err
+	}
+	return newUser, nil
+}
+
 // WipeDB removes all data from the database file, while not deleting the file itself
 func (db *DB) WipeDB() error {
 	db.mu.Lock()

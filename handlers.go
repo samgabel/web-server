@@ -125,3 +125,32 @@ func handlerGetChirpByID(db *database.DB) http.HandlerFunc {
 		})
 	}
 }
+
+// Create a new handler that allows for the creation of new users in the database
+func handlerPostUser(db *database.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// create a struct to decode the request body into
+		type parameters struct {
+			Email string `json:"email"`
+		}
+		// create a new decoder
+		decoder := json.NewDecoder(r.Body)
+		params := parameters{}
+		// decode request body into the parameters go struct
+		err := decoder.Decode(&params)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
+			return
+		}
+		// create the new user and save to database
+		user, err := db.CreateUser(params.Email)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("User could not be created: %s", err))
+			return
+		}
+		respondWithJSON(w, http.StatusCreated, User{
+			ID:    user.ID,
+			Email: user.Email,
+		})
+	}
+}

@@ -35,24 +35,6 @@ func (cfg *apiConfig) handlerResetMetrics(w http.ResponseWriter, r *http.Request
 	cfg.fileserverHits = 0
 }
 
-// Not part of the assignment, but I wanted to create a way to quickly wipe the Database with an API call
-func handlerWipeDB(db *database.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// use the WipeDB method in order to load the database.json file with an empty slice of bytes []byte{}
-		err := db.WipeDB()
-		if err != nil {
-			respondWithError(w, http.StatusOK, fmt.Sprintf("Error removing Chirps from database: %s", err))
-			return
-		}
-		// respond with "status": "deleted" message
-		respondWithJSON(w, http.StatusOK, struct {
-			Status string `json:"status"`
-		}{
-			Status: "deleted",
-		})
-	}
-}
-
 // We use currying in order to allow us to return a handler without modifying it's function signature,
 // instead we pass in a pointer to a database and inject that into our handler
 func handlerPostChirp(db *database.DB) http.HandlerFunc {

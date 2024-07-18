@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -31,7 +32,21 @@ func respondWithError(w http.ResponseWriter, status int, msg string) {
 	})
 }
 
-func cleanBadWords(badWords map[string]struct{}, body string) string {
+func validateChirp(body string) (string, error){
+	const maxChirpLength = 140
+	if len(body) > maxChirpLength {
+		return "", errors.New("Chirp is too long")
+	}
+	badWords := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
+	}
+	cleanBody := getCleanedBody(badWords, body)
+	return cleanBody, nil
+}
+
+func getCleanedBody(badWords map[string]struct{}, body string) string {
 	words := strings.Split(body, " ")
 	for i, word := range words {
 		lowerWord := strings.ToLower(word)

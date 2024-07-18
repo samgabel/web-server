@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/samgabel/web-server/internal/database"
 )
@@ -76,6 +77,31 @@ func handlerGetChirps(db *database.DB) http.HandlerFunc {
 		}
 		// respond with an array of Chirp messages
 		respondWithJSON(w, http.StatusOK, chirps)
+	}
+}
+
+// GET a Chirp by the ID
+func handlerGetChirpByID(db *database.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// get the ID requested in the request path
+		chirpIDString := r.PathValue("chirpID")
+		// convert the string ID into an int ID
+		chirpID, err := strconv.Atoi(chirpIDString)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "Invalid Chirp ID")
+			return
+		}
+		// Grab target Chirp
+		targetChirp, err := db.GetChirp(chirpID)
+		if err != nil {
+			respondWithError(w, http.StatusNotFound, fmt.Sprintf("Chirp not found in database: %s", err))
+			return
+		}
+		// respond with the single Chirp message
+		respondWithJSON(w, http.StatusOK, Chirp{
+			ID:   targetChirp.ID,
+			Body: targetChirp.Body,
+		})
 	}
 }
 

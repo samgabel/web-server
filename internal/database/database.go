@@ -51,6 +51,21 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 	return chirps, nil
 }
 
+// GetChirp returns a target Chirp found by id
+func (db *DB) GetChirp(id int) (Chirp, error) {
+	// load our DB into memory
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return Chirp{}, err
+	}
+	// grab our Chirp by ID
+	targetChirp, ok := dbStruct.Chirps[id]
+	if !ok {
+		return Chirp{}, errors.New("Chirp ID doesn't exist")
+	}
+	return targetChirp, nil
+}
+
 // WipeDB removes all data from the database file, while not deleting the file itself
 func (db *DB) WipeDB() error {
 	db.mu.Lock()

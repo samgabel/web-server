@@ -30,6 +30,7 @@ func main() {
 	// change these to a curried function(*database.DB) returning a http.HandlerFunc
 	mux.HandleFunc("POST /api/chirps", handlerPostChirp(db))
 	mux.HandleFunc("GET /api/chirps", handlerGetChirps(db))
+	mux.HandleFunc("GET /api/chirps/{chirpID}", handlerGetChirpByID(db))
 	mux.HandleFunc("DELETE /api/chirps", handlerDeleteChirps(db))
 
 	srv := &http.Server{

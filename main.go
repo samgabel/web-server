@@ -31,7 +31,7 @@ func main() {
 	mux.HandleFunc("POST /api/chirps", handlerPostChirp(db))
 	mux.HandleFunc("GET /api/chirps", handlerGetChirps(db))
 	mux.HandleFunc("GET /api/chirps/{chirpID}", handlerGetChirpByID(db))
-	mux.HandleFunc("DELETE /api/chirps", handlerDeleteChirps(db))
+	mux.HandleFunc("DELETE /api/wipe", handlerWipeDB(db))
 
 	srv := &http.Server{
 		Addr:    ":" + port,

@@ -99,6 +99,8 @@ func handlerPostUser(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		type parameters struct {
 			Email string `json:"email"`
+			// add password parameter in the API request
+			Password string `json:"password"`
 		}
 		decoder := json.NewDecoder(r.Body)
 		params := parameters{}
@@ -107,12 +109,38 @@ func handlerPostUser(db *database.DB) http.HandlerFunc {
 			respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
 			return
 		}
-		user, err := db.CreateUser(params.Email)
+		// CreateUser will now hash the API request password parameter and store it int the database
+		user, err := db.CreateUser(params.Email, params.Password)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("User could not be created: %s", err))
 			return
 		}
 		respondWithJSON(w, http.StatusCreated, User{
+			ID:    user.ID,
+			Email: user.Email,
+		})
+	}
+}
+
+func handlerLogin(db *database.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		type parameters struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}
+		decoder := json.NewDecoder(r.Body)
+		params := parameters{}
+		err := decoder.Decode(&params)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
+			return
+		}
+		user, err := db.AuthenticateUser(params.Email, params.Password)
+		if err != nil {
+			respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("User could not be authenticated: %s", err))
+			return
+		}
+		respondWithJSON(w, http.StatusOK, User{
 			ID:    user.ID,
 			Email: user.Email,
 		})

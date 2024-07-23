@@ -1,12 +1,16 @@
 package main
 
+import "os"
+
 type apiConfig struct {
 	fileserverHits int
+	jwtSecret      string
 }
 
 func newAPIConfig() apiConfig {
 	return apiConfig{
 		fileserverHits: 0,
+		jwtSecret:      os.Getenv("JWT_SECRET"),
 	}
 }
 
@@ -16,6 +20,12 @@ type Chirp struct {
 }
 
 type User struct {
-	ID       int    `json:"id"`
-	Email    string `json:"email"`
+	ID    int    `json:"id"`
+	Email string `json:"email"`
+}
+
+type AuthenticatedUser struct {
+	ID    int    `json:"id"`
+	Email string `json:"email"`
+	Token string `json:"token"`
 }

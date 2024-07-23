@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/joho/godotenv"
 	"github.com/samgabel/web-server/internal/database"
 )
 
@@ -14,8 +15,16 @@ const (
 )
 
 func main() {
+	// use godotenv to load in environment variables in our .env file
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Environment variables failed to load: %s", err)
+	}
+
+	// initialize new server request multiplexer (router)
 	mux := http.NewServeMux()
 
+	// initialize a new apiConfig
 	cfg := newAPIConfig()
 
 	// initialize new database
@@ -42,7 +51,8 @@ func main() {
 	mux.HandleFunc("GET /api/chirps", handlerGetChirps(db))
 	mux.HandleFunc("GET /api/chirps/{chirpID}", handlerGetChirpByID(db))
 	mux.HandleFunc("POST /api/users", handlerPostUser(db))
-	mux.HandleFunc("POST /api/login", handlerLogin(db))
+	mux.HandleFunc("PUT /api/users", cfg.handlerUpdateUser(db))
+	mux.HandleFunc("POST /api/login", cfg.handlerLogin(db))
 
 	// initialize new server
 	srv := &http.Server{

@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
+	"github.com/samgabel/web-server/internal/auth"
 	"github.com/samgabel/web-server/internal/database"
 )
 
@@ -122,11 +124,12 @@ func handlerPostUser(db *database.DB) http.HandlerFunc {
 	}
 }
 
-func handlerLogin(db *database.DB) http.HandlerFunc {
+func (cfg *apiConfig) handlerLogin(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		type parameters struct {
-			Email    string `json:"email"`
-			Password string `json:"password"`
+			Email            string `json:"email"`
+			Password         string `json:"password"`
+			ExpiresInSeconds *int   `json:"expires_in_seconds"`
 		}
 		decoder := json.NewDecoder(r.Body)
 		params := parameters{}
@@ -140,6 +143,53 @@ func handlerLogin(db *database.DB) http.HandlerFunc {
 			respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("User could not be authenticated: %s", err))
 			return
 		}
+		// create our signed JWT string
+		signedJWT, err := auth.NewSignedJWT(user.ID, cfg.jwtSecret, params.ExpiresInSeconds)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("JWT could not be created: %s", err))
+			return
+		}
+		respondWithJSON(w, http.StatusOK, AuthenticatedUser{
+			ID:    user.ID,
+			Email: user.Email,
+			// add our JWT to our response body
+			Token: signedJWT,
+		})
+	}
+}
+
+func (cfg *apiConfig) handlerUpdateUser(db *database.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// get authorization request header (the JWT sent in the request)
+		requestJWT, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if !ok {
+			respondWithError(w, http.StatusBadRequest, "Malformed Authorization request header")
+			return
+		}
+		// request body parameters
+		type parameters struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}
+		// decode request body
+		params := parameters{}
+		if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
+			return
+		}
+		// make sure the request JWT matches and is signed
+		userID, err := auth.VerifySignedJWT(requestJWT, cfg.jwtSecret)
+		if err != nil {
+			respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Unauthorized attempt to login using JWT: %s", err))
+			return
+		}
+		// update the user in the database once the JWT validation has completed
+		user, err := db.UpdateUser(userID, params.Email, params.Password)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Unable to update user info: %s", err))
+			return
+		}
+		// respond with the updated user info
 		respondWithJSON(w, http.StatusOK, User{
 			ID:    user.ID,
 			Email: user.Email,

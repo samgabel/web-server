@@ -62,3 +62,33 @@ func (db *DB) AuthenticateUser(email, password string) (User, error) {
 	}
 	return targetUser, nil
 }
+
+func (db *DB) UpdateUser(userID int, email, password string) (User, error) {
+	// load db into memory
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+	// hash the new password
+	hashedPassword, err := auth.HashPassword(password)
+	if err != nil {
+		return User{}, err
+	}
+	// create a new User struct to replace the old one
+	newUser := User{
+		ID:             userID,
+		Email:          email,
+		HashedPassword: hashedPassword,
+	}
+	// check for user in database
+	if _, ok := dbStruct.Users[userID]; !ok {
+		return User{}, errors.New("User does not exist")
+	}
+	// replace the old User info with the new User info
+	dbStruct.Users[userID] = newUser
+	err = db.writeDB(dbStruct)
+	if err != nil {
+		return User{}, err
+	}
+	return newUser, nil
+}

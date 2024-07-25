@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"strconv"
 	"time"
@@ -11,8 +13,8 @@ import (
 func NewSignedJWT(userID int, jwtSecret string, durationSeconds *int) (string, error) {
 	// handle JWT expiration
 	var expiry int
-	if durationSeconds == nil || *durationSeconds > 86400 {
-		expiry = 86400
+	if durationSeconds == nil || *durationSeconds > 3600 {
+		expiry = 3600
 	} else {
 		expiry = *durationSeconds
 	}
@@ -57,4 +59,16 @@ func VerifySignedJWT(requestJWT string, jwtSecret string) (int, error) {
 		return 0, err
 	}
 	return id, nil
+}
+
+func GenerateRefreshToken() (string, error) {
+	// create a empty byte slice of 32 bytes or 256 bits
+	randBytes := make([]byte, 32)
+	// use rand.Read() to populate the byte slice with random data
+	_, err := rand.Read(randBytes)
+	if err != nil {
+		return "", err
+	}
+	// convert random bytes to a hex string
+	return hex.EncodeToString(randBytes), nil
 }

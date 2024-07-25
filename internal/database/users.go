@@ -2,6 +2,7 @@ package database
 
 import (
 	"errors"
+	"time"
 
 	"github.com/samgabel/web-server/internal/auth"
 )
@@ -74,15 +75,19 @@ func (db *DB) UpdateUser(userID int, email, password string) (User, error) {
 	if err != nil {
 		return User{}, err
 	}
+	// check for user in database
+	user, ok := dbStruct.Users[userID]
+	if !ok {
+		return User{}, errors.New("User does not exist")
+	}
 	// create a new User struct to replace the old one
 	newUser := User{
 		ID:             userID,
 		Email:          email,
 		HashedPassword: hashedPassword,
-	}
-	// check for user in database
-	if _, ok := dbStruct.Users[userID]; !ok {
-		return User{}, errors.New("User does not exist")
+		// making sure to keep refresh token info in place
+		RefreshToken:   user.RefreshToken,
+		RefreshExp:     user.RefreshExp,
 	}
 	// replace the old User info with the new User info
 	dbStruct.Users[userID] = newUser
@@ -91,4 +96,78 @@ func (db *DB) UpdateUser(userID int, email, password string) (User, error) {
 		return User{}, err
 	}
 	return newUser, nil
+}
+
+func (db *DB) WriteRefreshToken(userID int, refreshToken string) error {
+	// load db into memory
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+	// Find User
+	user, ok := dbStruct.Users[userID]
+	if !ok {
+		return errors.New("Could not find user")
+	}
+	// create a new User struct to replace the old one
+	newRefreshTokenUser := User{
+		ID:             userID,
+		Email:          user.Email,
+		HashedPassword: user.HashedPassword,
+		RefreshToken:   refreshToken,
+		// 60 day expiration from creation
+		RefreshExp: time.Now().Add(1440 * time.Hour),
+	}
+	// write the new refreshToken to the db
+	dbStruct.Users[userID] = newRefreshTokenUser
+	err = db.writeDB(dbStruct)
+	if err != nil {
+		return err
+	}
+	// return our new Refresh Token
+	return nil
+}
+
+func (db *DB) RefreshJWT(refreshToken string, jwtSecret string) (string, error) {
+	// load db into memory
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return "", err
+	}
+	// range over users in db
+	for userID, user := range dbStruct.Users {
+		// if our user has a refresh token that matches our given token and it still hasn't expired, we return a new JWT
+		if refreshToken == user.RefreshToken && user.RefreshExp.After(time.Now()) {
+			return auth.NewSignedJWT(userID, jwtSecret, nil)
+		}
+	}
+	// return an error if no valid token is found
+	return "", errors.New("No valid refresh token found, cannot generate new JWT: Expired or non-existent")
+}
+
+func (db *DB) DeleteRefreshToken(refreshToken string) error {
+	// load db into memory
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+	// range over users in db
+	for userID, user := range dbStruct.Users {
+		// if our user has a refresh token that matches our given token and it still hasn't expired, we remove it
+		if refreshToken == user.RefreshToken && user.RefreshExp.After(time.Now()) {
+			// remove the refresh token and expiration date
+			dbStruct.Users[userID] = User{
+				ID:             user.ID,
+				Email:          user.Email,
+				HashedPassword: user.HashedPassword,
+			}
+			// write the edited dbStruct to the db
+			if err := db.writeDB(dbStruct); err != nil {
+				return err
+			}
+			return nil
+		}
+	}
+	// return an error if no valid token is found
+	return errors.New("No valid refresh token found, cannot revoke")
 }

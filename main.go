@@ -53,6 +53,8 @@ func main() {
 	mux.HandleFunc("POST /api/users", handlerPostUser(db))
 	mux.HandleFunc("PUT /api/users", cfg.handlerUpdateUser(db))
 	mux.HandleFunc("POST /api/login", cfg.handlerLogin(db))
+	mux.HandleFunc("POST /api/refresh", cfg.handlerRefresh(db))
+	mux.HandleFunc("POST /api/revoke", cfg.handlerRevokeRefresh(db))
 
 	// initialize new server
 	srv := &http.Server{

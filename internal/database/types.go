@@ -2,6 +2,7 @@ package database
 
 import (
 	"sync"
+	"time"
 )
 
 type DB struct {
@@ -31,7 +32,9 @@ type Chirp struct {
 }
 
 type User struct {
-	ID             int    `json:"id"`
-	Email          string `json:"email"`
-	HashedPassword []byte `json:"hashed_password"`
+	ID             int       `json:"id"`
+	Email          string    `json:"email"`
+	HashedPassword []byte    `json:"hashed_password"`
+	RefreshExp     time.Time `json:"refresh_exp"`
+	RefreshToken   string    `json:"refresh_token"`
 }

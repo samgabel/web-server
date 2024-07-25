@@ -51,3 +51,15 @@ func (db *DB) GetChirp(id int) (Chirp, error) {
 	}
 	return targetChirp, nil
 }
+
+func (db *DB) DeleteChirp(id int) error {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+	if _, ok := dbStruct.Chirps[id]; !ok {
+		return errors.New("Chirp ID doesn't exist")
+	}
+	dbStruct.Chirps[id] = Chirp{}
+	return db.writeDB(dbStruct)
+}

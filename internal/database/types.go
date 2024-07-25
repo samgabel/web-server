@@ -22,8 +22,9 @@ func NewDB(path string) (*DB, error) {
 }
 
 type DBStructure struct {
-	Chirps map[int]Chirp `json:"chirps"`
-	Users  map[int]User  `json:"users"`
+	Chirps        map[int]Chirp        `json:"chirps"`
+	Users         map[int]User         `json:"users"`
+	RefreshTokens map[int]RefreshToken `json:"refresh_tokens"`
 }
 
 type Chirp struct {
@@ -35,6 +36,9 @@ type User struct {
 	ID             int       `json:"id"`
 	Email          string    `json:"email"`
 	HashedPassword []byte    `json:"hashed_password"`
-	RefreshExp     time.Time `json:"refresh_exp"`
-	RefreshToken   string    `json:"refresh_token"`
+}
+
+type RefreshToken struct {
+	RefreshToken string    `json:"refresh_token"`
+	RefreshExp   time.Time `json:"refresh_expiration"`
 }

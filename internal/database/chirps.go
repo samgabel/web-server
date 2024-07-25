@@ -5,15 +5,16 @@ import (
 	"sort"
 )
 
-func (db *DB) CreateChirp(body string) (Chirp, error) {
+func (db *DB) CreateChirp(authorID int, body string) (Chirp, error) {
 	dbStruct, err := db.loadDB()
 	if err != nil {
 		return Chirp{}, err
 	}
 	newID := len(dbStruct.Chirps) + 1
 	newChirp := Chirp{
-		ID:   newID,
-		Body: body,
+		ID:       newID,
+		Body:     body,
+		AuthorID: authorID,
 	}
 	if dbStruct.Chirps == nil {
 		dbStruct.Chirps = make(map[int]Chirp)
@@ -50,4 +51,3 @@ func (db *DB) GetChirp(id int) (Chirp, error) {
 	}
 	return targetChirp, nil
 }
-

@@ -37,14 +37,26 @@ func (cfg *apiConfig) handlerResetMetrics(w http.ResponseWriter, r *http.Request
 	cfg.fileserverHits = 0
 }
 
-func handlerPostChirp(db *database.DB) http.HandlerFunc {
+func (cfg *apiConfig) handlerPostChirp(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// grab the Authorization request header and parse for the JWT string
+		requestJWT, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if !ok {
+			respondWithError(w, http.StatusBadRequest, "Malformed Authorization request header")
+			return
+		}
+		// verify the JWT
+		userID, err := auth.VerifySignedJWT(requestJWT, cfg.jwtSecret)
+		if err != nil {
+			respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Unauthorized attempt to login using JWT: %s", err))
+			return
+		}
 		type parameters struct {
 			Body string `json:"body"`
 		}
 		decoder := json.NewDecoder(r.Body)
 		params := parameters{}
-		err := decoder.Decode(&params)
+		err = decoder.Decode(&params)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
 			return
@@ -54,14 +66,15 @@ func handlerPostChirp(db *database.DB) http.HandlerFunc {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		chirp, err := db.CreateChirp(validated)
+		chirp, err := db.CreateChirp(userID, validated)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error creating Chirp and writing to disk: %s", err))
 			return
 		}
 		respondWithJSON(w, http.StatusCreated, Chirp{
-			ID:   chirp.ID,
-			Body: chirp.Body,
+			ID:       chirp.ID,
+			Body:     chirp.Body,
+			AuthorID: userID,
 		})
 	}
 }
@@ -100,7 +113,7 @@ func handlerGetChirpByID(db *database.DB) http.HandlerFunc {
 func handlerPostUser(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		type parameters struct {
-			Email string `json:"email"`
+			Email    string `json:"email"`
 			Password string `json:"password"`
 		}
 		decoder := json.NewDecoder(r.Body)
@@ -157,10 +170,10 @@ func (cfg *apiConfig) handlerLogin(db *database.DB) http.HandlerFunc {
 			return
 		}
 		respondWithJSON(w, http.StatusOK, AuthenticatedUser{
-			ID:    user.ID,
-			Email: user.Email,
+			ID:           user.ID,
+			Email:        user.Email,
 			RefreshToken: refreshToken,
-			Token: signedJWT,
+			Token:        signedJWT,
 		})
 	}
 }

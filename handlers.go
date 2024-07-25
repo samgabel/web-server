@@ -39,13 +39,11 @@ func (cfg *apiConfig) handlerResetMetrics(w http.ResponseWriter, r *http.Request
 
 func (cfg *apiConfig) handlerPostChirp(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// grab the Authorization request header and parse for the JWT string
 		requestJWT, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !ok {
 			respondWithError(w, http.StatusBadRequest, "Malformed Authorization request header")
 			return
 		}
-		// verify the JWT
 		userID, err := auth.VerifySignedJWT(requestJWT, cfg.jwtSecret)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Unauthorized attempt to login using JWT: %s", err))
@@ -112,41 +110,34 @@ func handlerGetChirpByID(db *database.DB) http.HandlerFunc {
 
 func (cfg *apiConfig) handlerDeleteChirpByID(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// grab Authorization request header JWT
 		requestJWT, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !ok {
 			respondWithError(w, http.StatusBadRequest, "Malformed Authorization request header")
 			return
 		}
-		// verify the request JWT
 		requestUserID, err := auth.VerifySignedJWT(requestJWT, cfg.jwtSecret)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Unauthorized attempt to login using JWT: %s", err))
 		}
-		// grab the Chirp ID specified in the api request
 		chirpIDString := r.PathValue("chirpID")
 		chirpID, err := strconv.Atoi(chirpIDString)
 		if err != nil {
 			respondWithError(w, http.StatusBadRequest, "Invalid Chirp ID")
 			return
 		}
-		// grab the Chirp from the database
 		targetChirp, err := db.GetChirp(chirpID)
 		if err != nil {
 			respondWithError(w, http.StatusNotFound, fmt.Sprintf("Chirp not found in database: %s", err))
 			return
 		}
-		// authorization flow to check if the request user ID of the JWT matches the author ID of the Chirp
 		if requestUserID != targetChirp.AuthorID {
 			respondWithError(w, http.StatusForbidden, "The requester ID doesn't match the author ID of the chirp")
 			return
 		}
-		// if all passes then we will delete the chirp from the db
 		if err := db.DeleteChirp(chirpID); err != nil {
 			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Failed deleting the Chirp from the database: %s", err))
 			return
 		}
-		// ... and write a sucessful delete status code
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

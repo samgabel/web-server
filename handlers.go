@@ -101,7 +101,6 @@ func handlerPostUser(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		type parameters struct {
 			Email string `json:"email"`
-			// add password parameter in the API request
 			Password string `json:"password"`
 		}
 		decoder := json.NewDecoder(r.Body)
@@ -111,7 +110,6 @@ func handlerPostUser(db *database.DB) http.HandlerFunc {
 			respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
 			return
 		}
-		// CreateUser will now hash the API request password parameter and store it int the database
 		user, err := db.CreateUser(params.Email, params.Password)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("User could not be created: %s", err))
@@ -143,19 +141,16 @@ func (cfg *apiConfig) handlerLogin(db *database.DB) http.HandlerFunc {
 			respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("User could not be authenticated: %s", err))
 			return
 		}
-		// create our refresh token
 		refreshToken, err := auth.GenerateRefreshToken()
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Refresh Token could not be created: %s", err))
 			return
 		}
-		// write the Refresh Token to DB
 		err = db.WriteRefreshToken(user.ID, refreshToken)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Could not update process refresh token: %s", err))
 			return
 		}
-		// create our signed JWT string
 		signedJWT, err := auth.NewSignedJWT(user.ID, cfg.jwtSecret, params.ExpiresInSeconds)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("JWT could not be created: %s", err))
@@ -164,9 +159,7 @@ func (cfg *apiConfig) handlerLogin(db *database.DB) http.HandlerFunc {
 		respondWithJSON(w, http.StatusOK, AuthenticatedUser{
 			ID:    user.ID,
 			Email: user.Email,
-			// add our Refresh Token to our response body
 			RefreshToken: refreshToken,
-			// add our JWT to our response body
 			Token: signedJWT,
 		})
 	}
@@ -174,36 +167,30 @@ func (cfg *apiConfig) handlerLogin(db *database.DB) http.HandlerFunc {
 
 func (cfg *apiConfig) handlerUpdateUser(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// get authorization request header (the JWT sent in the request)
 		requestJWT, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !ok {
 			respondWithError(w, http.StatusBadRequest, "Malformed Authorization request header")
 			return
 		}
-		// request body parameters
 		type parameters struct {
 			Email    string `json:"email"`
 			Password string `json:"password"`
 		}
-		// decode request body
 		params := parameters{}
 		if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
 			respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
 			return
 		}
-		// make sure the request JWT matches and is signed
 		userID, err := auth.VerifySignedJWT(requestJWT, cfg.jwtSecret)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Unauthorized attempt to login using JWT: %s", err))
 			return
 		}
-		// update the user in the database once the JWT validation has completed
 		user, err := db.UpdateUser(userID, params.Email, params.Password)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Unable to update user info: %s", err))
 			return
 		}
-		// respond with the updated user info
 		respondWithJSON(w, http.StatusOK, User{
 			ID:    user.ID,
 			Email: user.Email,
@@ -213,19 +200,16 @@ func (cfg *apiConfig) handlerUpdateUser(db *database.DB) http.HandlerFunc {
 
 func (cfg *apiConfig) handlerRefresh(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// get authorization request header (the JWT sent in the request)
 		requestRefreshToken, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !ok {
 			respondWithError(w, http.StatusBadRequest, "Malformed Authorization request header")
 			return
 		}
-		// request a refresh on our JWT by querying our db
 		newJWT, err := db.RefreshJWT(requestRefreshToken, cfg.jwtSecret)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Unable to hand out new JWT: %s", err))
 			return
 		}
-		// outline a response shape for our JSON response
 		type responseShape struct {
 			Token string `json:"token"`
 		}
@@ -237,19 +221,16 @@ func (cfg *apiConfig) handlerRefresh(db *database.DB) http.HandlerFunc {
 
 func (cfg *apiConfig) handlerRevokeRefresh(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// get authorization request header (the JWT sent in the request)
 		requestRefreshToken, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !ok {
 			respondWithError(w, http.StatusBadRequest, "Malformed Authorization request header")
 			return
 		}
-		// request a refresh on our JWT by querying our db
 		err := db.DeleteRefreshToken(requestRefreshToken)
 		if err != nil {
 			respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Unable to revoke refresh token: %s", err))
 			return
 		}
-		// write a status 204 if successful
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

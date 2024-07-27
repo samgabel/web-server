@@ -5,12 +5,14 @@ import "os"
 type apiConfig struct {
 	fileserverHits int
 	jwtSecret      string
+	polkaKey       string
 }
 
 func newAPIConfig() apiConfig {
 	return apiConfig{
 		fileserverHits: 0,
 		jwtSecret:      os.Getenv("JWT_SECRET"),
+		polkaKey:       os.Getenv("POLKA_KEY"),
 	}
 }
 

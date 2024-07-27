@@ -284,8 +284,19 @@ func (cfg *apiConfig) handlerRevokeRefresh(db *database.DB) http.HandlerFunc {
 	}
 }
 
-func handlerChirpyRedConfirmation(db *database.DB) http.HandlerFunc {
+func (cfg *apiConfig) handlerChirpyRedConfirmation(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// grab authorization request header from the request
+		requestKey, ok := strings.CutPrefix(r.Header.Get("Authorization"), "ApiKey ")
+		if !ok {
+			respondWithError(w, http.StatusUnauthorized, "Malformed or missing Authorization request header")
+			return
+		}
+		// check to see if it matches our Polka Key that was provided to us (.env file)
+		if cfg.polkaKey != requestKey {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 		// identify r.Body structure
 		type parameters struct {
 			Event string `json:"event"`

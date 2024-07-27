@@ -56,7 +56,7 @@ func main() {
 	mux.HandleFunc("POST /api/login", cfg.handlerLogin(db))
 	mux.HandleFunc("POST /api/refresh", cfg.handlerRefresh(db))
 	mux.HandleFunc("POST /api/revoke", cfg.handlerRevokeRefresh(db))
-	mux.HandleFunc("POST /api/polka/webhooks", handlerChirpyRedConfirmation(db))
+	mux.HandleFunc("POST /api/polka/webhooks", cfg.handlerChirpyRedConfirmation(db))
 
 	// initialize new server
 	srv := &http.Server{

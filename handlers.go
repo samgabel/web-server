@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -161,8 +162,9 @@ func handlerPostUser(db *database.DB) http.HandlerFunc {
 			return
 		}
 		respondWithJSON(w, http.StatusCreated, User{
-			ID:    user.ID,
-			Email: user.Email,
+			ID:              user.ID,
+			Email:           user.Email,
+			ChirpyRedStatus: user.ChirpyRedStatus,
 		})
 	}
 }
@@ -202,10 +204,11 @@ func (cfg *apiConfig) handlerLogin(db *database.DB) http.HandlerFunc {
 			return
 		}
 		respondWithJSON(w, http.StatusOK, AuthenticatedUser{
-			ID:           user.ID,
-			Email:        user.Email,
-			RefreshToken: refreshToken,
-			Token:        signedJWT,
+			ID:              user.ID,
+			Email:           user.Email,
+			RefreshToken:    refreshToken,
+			Token:           signedJWT,
+			ChirpyRedStatus: user.ChirpyRedStatus,
 		})
 	}
 }
@@ -237,8 +240,9 @@ func (cfg *apiConfig) handlerUpdateUser(db *database.DB) http.HandlerFunc {
 			return
 		}
 		respondWithJSON(w, http.StatusOK, User{
-			ID:    user.ID,
-			Email: user.Email,
+			ID:              user.ID,
+			Email:           user.Email,
+			ChirpyRedStatus: user.ChirpyRedStatus,
 		})
 	}
 }
@@ -276,6 +280,43 @@ func (cfg *apiConfig) handlerRevokeRefresh(db *database.DB) http.HandlerFunc {
 			respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Unable to revoke refresh token: %s", err))
 			return
 		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func handlerChirpyRedConfirmation(db *database.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// identify r.Body structure
+		type parameters struct {
+			Event string `json:"event"`
+			Data  struct {
+				UserID int `json:"user_id"`
+			} `json:"data"`
+		}
+		// decode the JSON request body into a Go struct
+		params := parameters{}
+		if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
+			return
+		}
+		// if the webhook event sends anything other than the "event" field being "user.upgraded" disregard the request
+		// by sending a 2XX code we are telling the third-party that we processed the request successfully
+		if params.Event != "user.upgraded" {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		// if all else passes then upgrade the user in the database
+		if err := db.UpgradeUserToRed(params.Data.UserID); err != nil {
+			// respond with 404 http status code if user could not be found in the db
+			if errors.Is(err, database.ErrUserNotExist) {
+				respondWithError(w, http.StatusNotFound, fmt.Sprintf("Couldn't upgrade user to Red in the database: %s", err))
+				return
+			}
+			// ... otherwise respond with a 500 http status code because something else went wrong
+			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Couldn't upgrade user to Red in the database: %s", err))
+			return
+		}
+		// if there are no errors with the upgrade to database process return 204 http status code
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

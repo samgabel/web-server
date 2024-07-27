@@ -21,13 +21,15 @@ type Chirp struct {
 }
 
 type User struct {
-	ID    int    `json:"id"`
-	Email string `json:"email"`
+	ID              int    `json:"id"`
+	Email           string `json:"email"`
+	ChirpyRedStatus bool   `json:"is_chirpy_red"`
 }
 
 type AuthenticatedUser struct {
-	ID           int    `json:"id"`
-	Email        string `json:"email"`
-	Token        string `json:"token"`
-	RefreshToken string `json:"refresh_token"`
+	ID              int    `json:"id"`
+	Email           string `json:"email"`
+	Token           string `json:"token"`
+	RefreshToken    string `json:"refresh_token"`
+	ChirpyRedStatus bool   `json:"is_chirpy_red"`
 }

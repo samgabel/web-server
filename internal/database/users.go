@@ -6,6 +6,8 @@ import (
 	"github.com/samgabel/web-server/internal/auth"
 )
 
+var ErrUserNotExist = errors.New("User does not exist")
+
 func (db *DB) CreateUser(email, password string) (User, error) {
 	dbStruct, err := db.loadDB()
 	if err != nil {
@@ -22,9 +24,10 @@ func (db *DB) CreateUser(email, password string) (User, error) {
 		return User{}, err
 	}
 	newUser := User{
-		ID:    newID,
-		Email: email,
-		HashedPassword: hash,
+		ID:              newID,
+		Email:           email,
+		HashedPassword:  hash,
+		ChirpyRedStatus: false,
 	}
 	if dbStruct.Users == nil {
 		dbStruct.Users = make(map[int]User)
@@ -66,13 +69,15 @@ func (db *DB) UpdateUser(userID int, email, password string) (User, error) {
 	if err != nil {
 		return User{}, err
 	}
-	if _, ok := dbStruct.Users[userID]; !ok {
-		return User{}, errors.New("User does not exist")
+	user, ok := dbStruct.Users[userID]
+	if !ok {
+		return User{}, ErrUserNotExist
 	}
 	newUser := User{
-		ID:             userID,
-		Email:          email,
-		HashedPassword: hashedPassword,
+		ID:              userID,
+		Email:           email,
+		HashedPassword:  hashedPassword,
+		ChirpyRedStatus: user.ChirpyRedStatus,
 	}
 	dbStruct.Users[userID] = newUser
 	err = db.writeDB(dbStruct)
@@ -80,4 +85,26 @@ func (db *DB) UpdateUser(userID int, email, password string) (User, error) {
 		return User{}, err
 	}
 	return newUser, nil
+}
+
+func (db *DB) UpgradeUserToRed(userID int) error {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+	user, ok := dbStruct.Users[userID]
+	if !ok {
+		return ErrUserNotExist
+	}
+	upgradedUser := User{
+		ID:              user.ID,
+		Email:           user.Email,
+		HashedPassword:  user.HashedPassword,
+		ChirpyRedStatus: true,
+	}
+	dbStruct.Users[userID] = upgradedUser
+	if err := db.writeDB(dbStruct); err != nil {
+		return err
+	}
+	return nil
 }

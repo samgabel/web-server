@@ -85,35 +85,20 @@ func handlerGetChirps(db *database.DB) http.HandlerFunc {
 			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error getting Chirps from database: %s", err))
 			return
 		}
-		// get the requested query if one was specified
-		// if one was not specified, immediately respond with all the chirps in the database
-		optionalQuery := r.URL.Query().Get("author_id")
-		if optionalQuery == "" {
-			respondWithJSON(w, http.StatusOK, chirps)
-			return
-		}
-		// convert query value string to an int
-		requestedAuthorID, err := strconv.Atoi(optionalQuery)
+		// abstract out the author_id query logic to its own function
+		queryAuthorID := r.URL.Query().Get("author_id")
+		querySelection, err := processQueryAuthorID(chirps, queryAuthorID)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Improper value for query parameter 'author_id'")
+			respondWithError(w, http.StatusBadRequest, fmt.Sprintf("Can't process author_id query: %s", err))
 			return
 		}
-		// range through all database chirps in order to find and append those that match the queried author_id
-		querySelection := []Chirp{}
-		for _, chirp := range chirps {
-			if chirp.AuthorID == requestedAuthorID {
-				querySelection = append(querySelection, Chirp{
-					ID:       chirp.ID,
-					Body:     chirp.Body,
-					AuthorID: chirp.AuthorID,
-				})
-			}
-		}
-		if len(querySelection) == 0 {
-			respondWithError(w, http.StatusBadRequest, "No chirps found with the requested author_id")
+		querySortType := r.URL.Query().Get("sort")
+		querySelectionSorted, err := processQuerySort(querySelection, querySortType)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, fmt.Sprintf("Can't process sort query: %s", err))
 			return
 		}
-		respondWithJSON(w, http.StatusOK, querySelection)
+		respondWithJSON(w, http.StatusOK, querySelectionSorted)
 	}
 }
 

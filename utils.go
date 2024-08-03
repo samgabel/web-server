@@ -62,7 +62,6 @@ func getCleanedBody(badWords map[string]struct{}, body string) string {
 }
 
 func processQueryAuthorID(chirps []database.Chirp, query string) ([]Chirp, error) {
-	// process empty query
 	if query == "" {
 		selection := []Chirp{}
 		for _, chirp := range chirps {
@@ -74,12 +73,10 @@ func processQueryAuthorID(chirps []database.Chirp, query string) ([]Chirp, error
 		}
 		return selection, nil
 	}
-	// convert query value string to an int
 	requestedAuthorID, err := strconv.Atoi(query)
 	if err != nil {
 		return []Chirp{}, errors.New("Improper value given, need int")
 	}
-	// range through all database chirps in order to find and append those that match the queried author_id
 	querySelection := []Chirp{}
 	for _, chirp := range chirps {
 		if chirp.AuthorID == requestedAuthorID {
@@ -97,11 +94,9 @@ func processQueryAuthorID(chirps []database.Chirp, query string) ([]Chirp, error
 }
 
 func processQuerySort(querySelection []Chirp, querySortType string) ([]Chirp, error) {
-	// process incorrect input
 	if querySortType != "asc" && querySortType != "desc" && querySortType != "" {
 		return []Chirp{}, errors.New("Improper value given, need 'asc' or 'desc'")
 	}
-	// handle if the sort type is desc, (default is asc)
 	if querySortType == "desc" {
 		slices.SortFunc(querySelection, func(a, b Chirp) int {
 			if a.ID < b.ID {

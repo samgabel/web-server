@@ -85,7 +85,6 @@ func handlerGetChirps(db *database.DB) http.HandlerFunc {
 			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error getting Chirps from database: %s", err))
 			return
 		}
-		// abstract out the author_id query logic to its own function
 		queryAuthorID := r.URL.Query().Get("author_id")
 		querySelection, err := processQueryAuthorID(chirps, queryAuthorID)
 		if err != nil {

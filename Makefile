@@ -7,6 +7,12 @@ debug:
 	go run . --debug
 
 test:
+	go test ./... -v
+
+test-auth:
+	go test ./internal/auth
+
+mock:
 	($(MAKE) wait-for-server && \
 		curl -s -X POST localhost:8080/api/users --data '{"email":"test@testdomain.com", "password":"123456"}' > /dev/null 2>&1 && \
 		curl -s -X POST localhost:8080/api/login --data '{"email":"test@testdomain.com", "password":"123456"}' | jq .refresh_token | \

@@ -21,7 +21,7 @@ func respondWithJSON(w http.ResponseWriter, status int, payload interface{}) {
 		return
 	}
 	w.WriteHeader(status)
-	w.Write(data)
+	w.Write(data) //nolint:errcheck
 }
 
 func respondWithError(w http.ResponseWriter, status int, msg string) {

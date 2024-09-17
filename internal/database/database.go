@@ -35,6 +35,7 @@ func (db *DB) loadDB() (DBStructure, error) {
 		return DBStructure{}, err
 	}
 	dbStruct := DBStructure{}
+	// nolint:errcheck
 	json.Unmarshal(data, &dbStruct)
 	return dbStruct, nil
 }
